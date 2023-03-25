@@ -3,6 +3,7 @@
   "displayName": "chatgpt-process-directory",
   "description": "Extension to process the contents of a directory using chatgpt and write the result to a new directory keeping the original structure",
   "version": "0.0.1",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.76.0"
   },
@@ -12,10 +13,49 @@
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
+    "configuration": [
+      {
+        "title": "ChatGPT File Processor",
+        "properties": {
+          "chatgpt-file-processor.apiKey": {
+            "type": "string",
+            "default": "",
+            "description": "API Key for ChatGPT"
+          },
+          "chatgpt-file-processor.model": {
+            "type": "string",
+            "default": "gpt-3.5-turbo",
+            "description": "Model to use for ChatGPT"
+          },
+          "chatgpt-file-processor.testRun": {
+            "type": "boolean",
+            "default": false,
+            "description": "Test run (process only the first 2 files)"
+          },
+          "chatgpt-file-processor.fileType": {
+            "type": "string",
+            "default": ".md",
+            "description": "File type to process (e.g. .md, .txt)"
+          },
+          "chatgpt-file-processor.systemPrompts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Library of system prompts"
+          }
+        }
+      }
+    ],
     "commands": [
       {
-        "command": "chatgpt-process-directory.helloWorld",
-        "title": "Hello World"
+        "command": "chatgpt-file-processor.processFiles",
+        "title": "Process Files with ChatGPT"
+      },
+      {
+        "command": "chatgpt-file-processor.addSystemPrompt",
+        "title": "Add System Prompt to ChatGPT Library"
       }
     ]
   },
@@ -44,9 +84,12 @@
     "ts-loader": "^9.4.2",
     "typescript": "^4.9.5",
     "webpack": "^5.76.3",
-    "webpack-cli": "^5.0.1"
+    "webpack-cli": "^5.0.1",
+    "vscode": "^1.1.37"
   },
   "dependencies": {
+    "fs-extra": "^11.1.1",
     "openai": "^3.2.1"
+
   }
 }
