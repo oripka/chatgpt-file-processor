@@ -1,4 +1,3 @@
-
 # ChatGPT File Processor
 
 ChatGPT File Processor is a Visual Studio Code extension that allows you to process a directory of files (and its subdirectories) using OpenAI's ChatGPT API.
@@ -13,6 +12,7 @@ ChatGPT File Processor is a Visual Studio Code extension that allows you to proc
 - Library of system prompts that can be kept in the configuration and be selectable.
 - Option to use a custom system prompt for each run.
 - Command to add a new system prompt to the library.
+- Specify file name patterns to copy unmodified to the output directory
 
 ## Getting Started
 
@@ -32,9 +32,10 @@ You can configure the extension settings through the Visual Studio Code settings
 
 - `chatgpt-file-processor.apiKey`: The API key for ChatGPT.
 - `chatgpt-file-processor.model`: The model to use for ChatGPT (e.g., "gpt-3.5-turbo").
-- `chatgpt-file-processor.fileType`: The file type to process (e.g., "*.md", "*.txt").
+- `chatgpt-file-processor.fileType`: The file type to process (e.g., "_.md", "_.txt").
 - `chatgpt-file-processor.testRun`: Test run option (process only the first 2 files).
 - `chatgpt-file-processor.systemPrompts`: Library of system prompts.
+- `chatgpt-file-processor.fileCopyPatterns`: an array of file name patterns to match files that should be copied unmodified to the output directory. Uses minimatch pattern syntax (https://github.com/isaacs/minimatch). Defaults to an empty array.
 
 ## Commands
 
@@ -49,7 +50,17 @@ If you want to contribute to this project or report a bug, please open an issue 
 
     npm run compile
     vsce package
-    code --install-extension chatgpt-process-directory-0.0.1.vsi
+    code --install-extension chatgpt-process-directory-0.0.4.vsi
+
+## Release Notes
+
+### 0.0.4
+
+Added support for specifying file name patterns to copy unmodified to the output directory.
+
+### 0.0.1
+
+Initial release of ChatGPT File Processor.
 
 ## License
 

@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
+import { minimatch } from 'minimatch'
 import { Configuration, OpenAIApi } from "openai";
 
 type OverwriteSettings = {
@@ -107,6 +108,19 @@ async function processFiles(
         const inputFilePath = path.join(inputPath, entry.name);
         const outputFilePath = path.join(outputPath, entry.name);
 
+        // Check if file should be copied without processing
+        const fileCopyPatterns = vscode.workspace
+          .getConfiguration("chatgpt-file-processor")
+          .get("fileCopyPatterns") as string[];
+        const shouldCopyUnmodified = fileCopyPatterns.some((pattern) =>
+          minimatch(entry.name, pattern)
+        );
+        if (shouldCopyUnmodified) {
+          fs.mkdirSync(path.dirname(outputFilePath), { recursive: true });
+          fs.copyFileSync(inputFilePath, outputFilePath);
+          continue;
+        }
+
         if (fs.existsSync(outputFilePath)) {
           const overwrite = await shouldOverwriteFile(
             outputFilePath,
@@ -116,13 +130,6 @@ async function processFiles(
           if (!overwrite) {
             continue;
           }
-
-          // if (overwriteSettings.alwaysOverwrite) {
-          // }
-
-          // if (overwriteSettings.neverOverwrite) {
-          //   continue
-          // }
         }
 
         try {
