@@ -45,6 +45,12 @@ You can configure the extension settings through the Visual Studio Code settings
 
 If you want to contribute to this project or report a bug, please open an issue or submit a pull request on the [GitHub repository](https://github.com/oripka/chatgpt-file-processor).
 
+## Building
+
+    npm run compile
+    vsce package
+    code --install-extension chatgpt-process-directory-0.0.1.vsi
+
 ## License
 
 This extension is licensed under the [MIT License](https://opensource.org/licenses/MIT).

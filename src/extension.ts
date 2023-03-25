@@ -3,16 +3,20 @@ import * as fs from "fs";
 import * as path from "path";
 import { Configuration, OpenAIApi } from "openai";
 
+type OverwriteSettings = {
+  alwaysOverwrite: boolean;
+  neverOverwrite: boolean;
+};
+
 async function shouldOverwriteFile(
   filePath: string,
-  alwaysOverwrite: boolean,
-  neverOverwrite: boolean
+  settings: OverwriteSettings
 ): Promise<boolean> {
-  if (alwaysOverwrite) {
+  if (settings.alwaysOverwrite) {
     return true;
   }
 
-  if (neverOverwrite) {
+  if (settings.neverOverwrite) {
     return false;
   }
 
@@ -28,10 +32,10 @@ async function shouldOverwriteFile(
     case "No":
       return false;
     case "Always":
-      alwaysOverwrite = true;
+      settings.alwaysOverwrite = true;
       return true;
     case "Never":
-      neverOverwrite = true;
+      settings.neverOverwrite = true;
       return false;
     default:
       return false;
@@ -88,8 +92,7 @@ async function processFiles(
   testRun: boolean
 ) {
   let filesProcessed = 0;
-  let alwaysOverwrite = false;
-  let neverOverwrite = false;
+  const overwriteSettings = { alwaysOverwrite: false, neverOverwrite: false };
 
   async function processDirectory(inputPath: string, outputPath: string) {
     const entries = fs.readdirSync(inputPath, { withFileTypes: true });
@@ -107,33 +110,41 @@ async function processFiles(
         if (fs.existsSync(outputFilePath)) {
           const overwrite = await shouldOverwriteFile(
             outputFilePath,
-            alwaysOverwrite,
-            neverOverwrite
+            overwriteSettings
           );
 
           if (!overwrite) {
             continue;
           }
 
-          if (alwaysOverwrite) {
-            neverOverwrite = false;
-          }
+          // if (overwriteSettings.alwaysOverwrite) {
+          // }
 
-          if (neverOverwrite) {
-            alwaysOverwrite = false;
-          }
+          // if (overwriteSettings.neverOverwrite) {
+          //   continue
+          // }
         }
 
         try {
+          const processingMessage = vscode.window.setStatusBarMessage(
+            `Processing file: ${inputFilePath}`
+          );
+
           const processedContent = await processFile(
             inputFilePath,
             systemMessage,
             apiKey,
             model
           );
+          processingMessage.dispose();
 
           fs.mkdirSync(path.dirname(outputFilePath), { recursive: true });
           fs.writeFileSync(outputFilePath, processedContent);
+
+          vscode.window.setStatusBarMessage(
+            `Finished processing file: ${inputFilePath}`,
+            3000
+          );
 
           filesProcessed++;
           if (testRun && filesProcessed >= 2) {
@@ -195,7 +206,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
       );
 
-      let systemMessage;
+      let systemMessage: string | undefined;
       if (selectedPrompt === "Custom") {
         systemMessage = await vscode.window.showInputBox({
           prompt: "Enter the custom system prompt:",
@@ -204,9 +215,18 @@ export function activate(context: vscode.ExtensionContext) {
         systemMessage = selectedPrompt;
       }
 
-      if (!systemMessage) {
+      if (!systemMessage || systemMessage === undefined) {
         return;
       }
+
+      const cancellationTokenSource = new vscode.CancellationTokenSource();
+      const cancellationToken = cancellationTokenSource.token;
+
+      const progressOptions: vscode.ProgressOptions = {
+        location: vscode.ProgressLocation.Notification,
+        title: "Processing files with ChatGPT...",
+        cancellable: true,
+      };
 
       const fileType = vscode.workspace
         .getConfiguration("chatgpt-file-processor")
@@ -221,16 +241,39 @@ export function activate(context: vscode.ExtensionContext) {
         .getConfiguration("chatgpt-file-processor")
         .get("testRun") as boolean;
 
-      await processFiles(
-        inputDir[0].fsPath,
-        outputDir[0].fsPath + "_processed",
-        fileType,
-        systemMessage,
-        apiKey,
-        model,
-        testRun
-      );
-      vscode.window.showInformationMessage("Files processed successfully.");
+      vscode.window.withProgress(progressOptions, async (progress) => {
+        cancellationToken.onCancellationRequested(() => {
+          cancellationTokenSource.cancel();
+          console.log("File processing was cancelled.");
+        });
+
+        progress.report({ message: "Starting file processing..." });
+
+        try {
+          await processFiles(
+            inputDir[0].fsPath,
+            outputDir[0].fsPath + "_processed",
+            fileType,
+            systemMessage as string,
+            apiKey,
+            model,
+            testRun
+          );
+          vscode.window.showInformationMessage("Files processed successfully.");
+        } catch (error) {
+          if (cancellationToken.isCancellationRequested) {
+            vscode.window.showInformationMessage(
+              "File processing was cancelled."
+            );
+          } else {
+            if (error instanceof Error) {
+              vscode.window.showErrorMessage(
+                `An error occurred during file processing: ${error.message}`
+              );
+            }
+          }
+        }
+      });
     }
   );
 
