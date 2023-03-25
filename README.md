@@ -1,6 +1,4 @@
-Here's a sample `README.md` for the ChatGPT File Processor extension:
 
-```markdown
 # ChatGPT File Processor
 
 ChatGPT File Processor is a Visual Studio Code extension that allows you to process a directory of files (and its subdirectories) using OpenAI's ChatGPT API.
@@ -50,6 +48,3 @@ If you want to contribute to this project or report a bug, please open an issue 
 ## License
 
 This extension is licensed under the [MIT License](https://opensource.org/licenses/MIT).
-```
-
-Replace the sample GitHub repository URL with the actual URL of your repository. You can customize the `README.md` further according to your requirements. Add this file to your extension's root directory, and it will be displayed as the extension's description in the Visual Studio Code marketplace.
