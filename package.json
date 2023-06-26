@@ -2,7 +2,7 @@
   "name": "chatgpt-process-directory",
   "displayName": "chatgpt-process-directory",
   "description": "ChatGPT File Processor is a Visual Studio Code extension that allows you to process a directory of files (and its subdirectories) using OpenAI's ChatGPT API.",
-  "version": "0.0.4",
+  "version": "0.0.6",
   "author": {
     "name": "Oliver-Tobias Ripka"
   },
@@ -73,7 +73,12 @@
       {
         "command": "chatgpt-file-processor.addSystemPrompt",
         "title": "Add System Prompt to ChatGPT Library"
+      },
+      {
+        "command": "chatgpt-file-processor.processSelection",
+        "title": "Process selection with ChatGPT"
       }
+      
     ]
   },
   "scripts": {

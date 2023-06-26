@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
-import { minimatch } from 'minimatch'
+import { minimatch } from "minimatch";
 import { Configuration, OpenAIApi } from "openai";
 
 type OverwriteSettings = {
@@ -43,6 +43,18 @@ async function shouldOverwriteFile(
   }
 }
 
+async function replaceSelectedText(text: string) {
+  const editor = vscode.window.activeTextEditor;
+  if (editor) {
+    const selections = editor.selections;
+    editor.edit((editBuilder) => {
+      selections.forEach((selection) => {
+        editBuilder.replace(selection, text);
+      });
+    });
+  }
+}
+
 async function addSystemPrompt(prompt: string) {
   const systemPrompts = vscode.workspace
     .getConfiguration("chatgpt-file-processor")
@@ -59,7 +71,13 @@ async function processFile(
   apiKey: string,
   model: string
 ): Promise<string> {
-  const fileContent = fs.readFileSync(filePath, "utf-8");
+  let fileContent: string;
+
+  if (fs.existsSync(filePath)) {
+    fileContent = fs.readFileSync(filePath, "utf-8");
+  } else {
+    fileContent = filePath;
+  }
 
   const configuration = new Configuration({
     apiKey: apiKey,
@@ -285,6 +303,101 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(disposable);
+
+  let processSelectionDisposable = vscode.commands.registerCommand(
+    "chatgpt-file-processor.processSelection",
+    async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor) {
+        const selectedText = editor.document.getText(editor.selection);
+
+        const cancellationTokenSource = new vscode.CancellationTokenSource();
+        const cancellationToken = cancellationTokenSource.token;
+
+        const progressOptions: vscode.ProgressOptions = {
+          location: vscode.ProgressLocation.Notification,
+          title: "Processing selection with ChatGPT...",
+          cancellable: true,
+        };
+
+        const systemPrompts = vscode.workspace
+          .getConfiguration("chatgpt-file-processor")
+          .get("systemPrompts") as string[];
+
+        const selectedPrompt = await vscode.window.showQuickPick(
+          [...systemPrompts, "Custom"],
+          {
+            placeHolder:
+              "Select a system prompt from the library or choose Custom to enter a new one",
+          }
+        );
+
+        let systemMessage: string | undefined;
+        if (selectedPrompt === "Custom") {
+          systemMessage = await vscode.window.showInputBox({
+            prompt: "Enter the custom system prompt:",
+          });
+        } else {
+          systemMessage = selectedPrompt;
+        }
+
+        if (!systemMessage || systemMessage === undefined) {
+          return;
+        }
+
+        const apiKey = vscode.workspace
+          .getConfiguration("chatgpt-file-processor")
+          .get("apiKey") as string;
+        const model = vscode.workspace
+          .getConfiguration("chatgpt-file-processor")
+          .get("model") as string;
+
+        vscode.window.withProgress(progressOptions, async (progress) => {
+          cancellationToken.onCancellationRequested(() => {
+            cancellationTokenSource.cancel();
+            console.log("Selection processing was cancelled.");
+          });
+
+          progress.report({ message: "Starting selection processing..." });
+
+          try {
+            const processedText = await processFile(
+              selectedText,
+              systemMessage as string,
+              apiKey,
+              model
+              // cancellationToken
+            );
+
+            if (!cancellationToken.isCancellationRequested) {
+              replaceSelectedText(processedText);
+              vscode.window.showInformationMessage(
+                "Selection processed successfully."
+              );
+            } else {
+              vscode.window.showInformationMessage(
+                "Selection processing was cancelled."
+              );
+            }
+          } catch (error) {
+            if (cancellationToken.isCancellationRequested) {
+              vscode.window.showInformationMessage(
+                "Selection processing was cancelled."
+              );
+            } else {
+              if (error instanceof Error) {
+                vscode.window.showErrorMessage(
+                  `An error occurred during selection processing: ${error.message}`
+                );
+              }
+            }
+          }
+        });
+      }
+    }
+  );
+
+  context.subscriptions.push(processSelectionDisposable);
 
   let addPromptDisposable = vscode.commands.registerCommand(
     "chatgpt-file-processor.addSystemPrompt",
